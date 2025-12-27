@@ -1,0 +1,16 @@
+[
+    {
+        "Judul": "Book1",
+        "Author": "Fulan, M.Kom",
+        "PageRomawi": 5,
+        "Page": 150,
+        "Status": {
+            "IsRead": true,
+            "IsRomawiPage": true,
+            "IsPage": false
+        },
+        "Reading": {
+            "Page": 5
+        }
+    }
+]
