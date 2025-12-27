@@ -1,9 +1,10 @@
 [
     {
-        "Judul": "Mengenal Indonesia",
-        "Author": "Bustamil",
+        "Judul": "Reset Indonesia",
+        "Slug": "reset-indonesia",
+        "Author": "Dandhy Laksono",
         "PageRomawi": "7",
-        "Page": "89",
+        "Page": 150,
         "Status": {
             "IsRead": false,
             "IsRomawiPage": false,

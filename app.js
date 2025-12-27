@@ -34,9 +34,10 @@ const saveBooks = async (books) => {
 
 const getBook = async (slug) => {
     const books = await getBooks('./data.json')
-    const indexBook = books.findIndex(book => book.slug === slug)
-    
-    return {}
+    const indexBook = books.findIndex(book => book.Slug === slug)
+    const book = books[indexBook]
+
+    return [book, indexBook]
 }
 
 app.get('/api/books', async (req, res) => {
@@ -61,6 +62,16 @@ app.get('/api/books', async (req, res) => {
     }
 })
 
+app.get('/api/books/:slug', async (req, res) => {
+    const slug = req.params.slug
+    const [book, indexBook] = await getBook(slug)
+    if (indexBook < 0) {
+        res.status(401).json({ message: "Data Tidak Ditemukan", data: "" })
+    } else {
+        res.status(201).json({ message: "Data Ditemukan", data: book })
+    }
+})
+
 app.post('/api/books/add', async (req, res) => {
     const books = await getBooks('./data.json')
     let content = req.body
@@ -74,7 +85,7 @@ app.post('/api/books/add', async (req, res) => {
         ReadingNumber: 0
     }
 
-    content = {...content, ...defaultPropBook}
+    content = { ...content, ...defaultPropBook }
 
     books.push(content)
 
@@ -86,6 +97,37 @@ app.post('/api/books/add', async (req, res) => {
     }
 })
 
+app.put('/api/books/edit/:slug', async (req, res) => {
+    const slug = req.params.slug
+    const books = await getBooks('./data.json')
+    const [book, indexBook] = await getBook(slug)
+
+    if (indexBook < 0) {
+        res.status(401).json({ message: 'Data Tidak Ditemukan' })
+    } else {
+        const updateData = req.body
+        books[indexBook] = { ...book, ...updateData }
+        await saveBooks(books)
+        res.status(201).json({ message: 'Data Diubah' })
+    }
+
+})
+
+app.delete('/api/books/del/:slug', async (req, res) => {
+    const slug = req.params.slug
+    const books = await getBooks('./data.json')
+    const [book, indexBook] = await getBook(slug)
+
+    if (indexBook < 0) {
+        res.status(401).json({ message: 'Data tidak Ditemukan' })
+    } else {
+        const updateBooks = books.filter(book => book.Slug !== slug)
+        saveBooks(updateBooks)
+        res.status(201).json({ message: 'Data Dihapus' })
+    }
+
+})
+
 // server menangkap
 app.listen(port, () => {
     console.log(`Server Running on port: http://localhost:${port} \nRunning....`)
@@ -94,13 +136,14 @@ app.listen(port, () => {
 
 // Next buat endpoint CRUD
 // create = http://localhost:3000/books/add [sudah]
-// read per item = http://localhost:3000/books/:slug
+// read per item = http://localhost:3000/books/:slug [sudah]
 // read all item = http://localhost:3000/books [sudah]
-// update = http://localhost:3000/books/edit/:slug
-// delete = http://localhost:3000/books/del/:slug
+// update = http://localhost:3000/books/edit/:slug [sudah]
+// delete = http://localhost:3000/books/del/:slug [sudah]
 
-// *add 
+// *add* ==> next edit 
 // slug auto generate judul 
 // status dan reading auto isi di data
+
 
 
