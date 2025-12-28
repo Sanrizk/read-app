@@ -6,6 +6,7 @@ const app = express()
 const cors = require('cors')
 const port = 3000
 const dataJson = './data.json'
+require('dotenv').config()
 
 
 app.use(cors())
@@ -41,79 +42,114 @@ const getBook = async (slug) => {
 }
 
 app.get('/api/books', async (req, res) => {
-    // jika ada baca data di file json
-    if (fs.existsSync('data.json')) {
+    if (req.header('x-api-key') === process.env.API_KEY) {
+        // jika ada baca data di file json
+        if (fs.existsSync('data.json')) {
 
-        const data = await getBooks('./data.json')
-        res.status(201).json({ message: 'Success', data })
+            const data = await getBooks('./data.json')
+            res.status(201).json({ message: 'Success', data })
 
+        } else {
+            // file gak ada maka dibuat baru kosongan
+            // --start--
+            const content = []
+            fs.writeFile('data.json', JSON.stringify(content, null, 4), err => {
+                if (err) {
+                    console.error(err);
+                } else {
+                    res.send('File "data.json" has been written successfully.');
+                }
+            });
+            // --end--
+        }
     } else {
-        // file gak ada maka dibuat baru kosongan
-        // --start--
-        const content = []
-        fs.writeFile('data.json', JSON.stringify(content, null, 4), err => {
-            if (err) {
-                console.error(err);
-            } else {
-                res.send('File "data.json" has been written successfully.');
-            }
-        });
-        // --end--
+        res.status(401).json({ message: 'Failed: Unauthorized' })
     }
 })
 
 app.get('/api/books/:slug', async (req, res) => {
-    const slug = req.params.slug
-    const [book, indexBook] = await getBook(slug)
-    if (indexBook < 0) {
-        res.status(401).json({ message: "Data Tidak Ditemukan", data: "" })
+    if (req.header('x-api-key') === process.env.API_KEY) {
+        const slug = req.params.slug
+        const [book, indexBook] = await getBook(slug)
+        if (indexBook < 0) {
+            res.status(401).json({ message: "Data Tidak Ditemukan", data: "" })
+        } else {
+            res.status(201).json({ message: "Data Ditemukan", data: book })
+        }
     } else {
-        res.status(201).json({ message: "Data Ditemukan", data: book })
+        res.status(401).json({ message: 'Failed: Unauthorized' })
     }
 })
 
 app.post('/api/books/add', async (req, res) => {
-    const books = await getBooks('./data.json')
-    let content = req.body
+    if (req.header('x-api-key') === process.env.API_KEY) {
+        const books = await getBooks('./data.json')
+        let content = req.body
 
-    let defaultPropBook = {
-        Status: {
-            IsRead: false,
-            IsRomawiPage: false,
-            IsPage: false
-        },
-        ReadingNumber: 0
-    }
+        let defaultPropBook = {
+            Slug: req.body.Judul.toLowerCase().split(' ').join('-'),
+            Status: {
+                IsRead: false,
+                IsRomawiPage: false,
+                IsPage: false
+            },
+            ReadingNumber: 0
+        }
 
-    content = { ...content, ...defaultPropBook }
+        const newBook = { ...content, ...defaultPropBook }
 
-    books.push(content)
+        books.push(newBook)
 
-    try {
-        await saveBooks(books)
-        res.status(201).json({ message: 'Data ditambahkan', data: content })
-    } catch (err) {
-        console.error(err)
+        try {
+            await saveBooks(books)
+            res.status(201).json({ message: 'Data ditambahkan', data: content })
+        } catch (err) {
+            console.error(err)
+        }
+    } else {
+        res.status(401).json({ message: 'Failed: Unauthorized' })
     }
 })
 
 app.put('/api/books/edit/:slug', async (req, res) => {
-    const slug = req.params.slug
-    const books = await getBooks('./data.json')
-    const [book, indexBook] = await getBook(slug)
+    if (req.header('x-api-key') === process.env.API_KEY) {
+        const slug = req.params.slug
+        const books = await getBooks('./data.json')
+        const [book, indexBook] = await getBook(slug)
 
-    if (indexBook < 0) {
-        res.status(401).json({ message: 'Data Tidak Ditemukan' })
+        if (indexBook < 0) {
+            res.status(401).json({ message: 'Data Tidak Ditemukan' })
+        } else {
+            const updateData = req.body
+            books[indexBook] = { ...book, ...updateData }
+            await saveBooks(books)
+            res.status(201).json({ message: 'Data Diubah' })
+        }
     } else {
-        const updateData = req.body
-        books[indexBook] = { ...book, ...updateData }
-        await saveBooks(books)
-        res.status(201).json({ message: 'Data Diubah' })
+        res.status(401).json({ message: 'Failed: Unauthorized' })
     }
-
 })
 
 app.delete('/api/books/del/:slug', async (req, res) => {
+    if (req.header('x-api-key') === process.env.API_KEY) {
+        const slug = req.params.slug
+        const books = await getBooks('./data.json')
+        const [book, indexBook] = await getBook(slug)
+
+        if (indexBook < 0) {
+            res.status(401).json({ message: 'Data tidak Ditemukan' })
+        } else {
+            const updateBooks = books.filter(book => book.Slug !== slug)
+            saveBooks(updateBooks)
+            res.status(201).json({ message: 'Data Dihapus' })
+        }
+    } else {
+        res.status(401).json({ message: 'Failed: Unauthorized' })
+    }
+})
+
+/*
+app.put('/api/books/read/:slug', async (req, res) => {
     const slug = req.params.slug
     const books = await getBooks('./data.json')
     const [book, indexBook] = await getBook(slug)
@@ -121,12 +157,20 @@ app.delete('/api/books/del/:slug', async (req, res) => {
     if (indexBook < 0) {
         res.status(401).json({ message: 'Data tidak Ditemukan' })
     } else {
-        const updateBooks = books.filter(book => book.Slug !== slug)
-        saveBooks(updateBooks)
-        res.status(201).json({ message: 'Data Dihapus' })
-    }
+        const updateData = {
+            Status: {
+                IsRead: !book.Status.IsRead,
+                IsRomawiPage: !book.Status.IsRomawiPage,
+                IsPage: book.Status.IsPage
+            }
+        }
 
+        books[indexBook] = { ...book, ...updateData }
+        await saveBooks(books)
+        res.status(201).json({ message: 'Status Buku Diubah' })
+    }
 })
+*/
 
 // server menangkap
 app.listen(port, () => {
@@ -141,9 +185,33 @@ app.listen(port, () => {
 // update = http://localhost:3000/books/edit/:slug [sudah]
 // delete = http://localhost:3000/books/del/:slug [sudah]
 
+// buku dibaca atau belum dengan switch (UI)
+/*
+const updateData = {
+    Status: {
+        IsRead: !book.Status.IsRead,
+        IsRomawiPage: !book.Status.IsRomawiPage,
+        IsPage: book.Status.IsPage
+    }
+}
+*/
+
+// update halaman readingnumber (form input) dan status page (radio button)
+/*
+const updateData = {
+    ReadingNumber: number
+}
+*/
+
+
+
 // *add* ==> next edit 
 // slug auto generate judul 
 // status dan reading auto isi di data
+
+// **rule frontend
+// judul buku tidak bisa diubah. jika ada kesalahan hapus buku
+// karena terpengaruh slug. method edit belum ada pengeditan slug
 
 
 
