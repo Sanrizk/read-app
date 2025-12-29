@@ -1,0 +1,25 @@
+[
+    {
+        "Judul": "Reset Indonesia",
+        "Slug": "reset-indonesia",
+        "Author": "Dandhy L",
+        "PageRomawi": "7",
+        "Page": 200,
+        "Status": {
+            "IsRead": false,
+            "IsRomawiPage": false,
+            "IsPage": false
+        },
+        "ReadingNumber": 20
+    },
+    {
+        "Judul": "Saat Kapitalis Menyerah",
+        "Slug": "saat-kapitalis-menyerah",
+        "Status": {
+            "IsRead": false,
+            "IsRomawiPage": false,
+            "IsPage": false
+        },
+        "ReadingNumber": 0
+    }
+]
