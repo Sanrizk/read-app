@@ -1,12 +1,15 @@
 // buat variabel require express, panggil express, port
 const express = require('express')
-const fs = require('fs')
-const fsP = require('fs').promises
 const app = express()
 const cors = require('cors')
 const port = 3000
-const dataJson = './data.json'
+
+// arah ke env local
+// require('dotenv').config({path: 'env.local'})
+
+// arah ke env
 require('dotenv').config()
+const { kv } = require('@vercel/kv')
 
 
 app.use(cors())
@@ -16,12 +19,13 @@ app.use(express.urlencoded({ extended: true }))
 // middleware untuk parsing body menjadi json (biasanya untuk post dll)
 app.use(express.json())
 
-const getBooks = async (fileData) => {
+const getBooks = async () => {
     let dataBooks = []
 
     try {
-        dataBooks = await fsP.readFile(fileData)
-        dataBooks = JSON.parse(dataBooks)
+        // dataBooks = await fsP.readFile(fileData)
+        // dataBooks = JSON.parse(dataBooks)
+        dataBooks = await kv.get('my_books') || []
     } catch (err) {
         console.error('Error', err)
     }
@@ -30,7 +34,8 @@ const getBooks = async (fileData) => {
 }
 
 const saveBooks = async (books) => {
-    fsP.writeFile('./data.json', JSON.stringify(books, null, 4))
+    await kv.set('my_books', books)
+    // fsP.writeFile('./data.json', JSON.stringify(books, null, 4))
 }
 
 const getBook = async (slug) => {
@@ -43,28 +48,31 @@ const getBook = async (slug) => {
 
 app.get('/api/books', async (req, res) => {
     if (req.header('x-api-key') === process.env.API_KEY) {
+        const data = await getBooks('')
+        res.status(201).json({ message: 'Success', data })
         // jika ada baca data di file json
-        if (fs.existsSync('data.json')) {
+        //     if (fs.existsSync('data.json')) {
 
-            const data = await getBooks('./data.json')
-            res.status(201).json({ message: 'Success', data })
+        //         const data = await getBooks('./data.json')
+        //         res.status(201).json({ message: 'Success', data })
 
-        } else {
-            // file gak ada maka dibuat baru kosongan
-            // --start--
-            const content = []
-            fs.writeFile('data.json', JSON.stringify(content, null, 4), err => {
-                if (err) {
-                    console.error(err);
-                } else {
-                    res.send('File "data.json" has been written successfully.');
-                }
-            });
-            // --end--
-        }
+        //     } else {
+        //         // file gak ada maka dibuat baru kosongan
+        //         // --start--
+        //         const content = []
+        //         fs.writeFile('data.json', JSON.stringify(content, null, 4), err => {
+        //             if (err) {
+        //                 console.error(err);
+        //             } else {
+        //                 res.send('File "data.json" has been written successfully.');
+        //             }
+        //         });
+        //         // --end--
+        //     }
     } else {
         res.status(401).json({ message: 'Failed: Unauthorized' })
     }
+
 })
 
 app.get('/api/books/:slug', async (req, res) => {
@@ -83,11 +91,11 @@ app.get('/api/books/:slug', async (req, res) => {
 
 app.post('/api/books/add', async (req, res) => {
     if (req.header('x-api-key') === process.env.API_KEY) {
-        const books = await getBooks('./data.json')
+        const books = await getBooks()
         let content = req.body
 
         let defaultPropBook = {
-            Slug: req.body.Judul.toLowerCase().split(' ').join('-'),
+            Slug: req.body.Title.toLowerCase().split(' ').join('-'),
             Status: {
                 IsRead: false,
                 IsRomawiPage: false,
@@ -114,7 +122,7 @@ app.post('/api/books/add', async (req, res) => {
 app.put('/api/books/edit/:slug', async (req, res) => {
     if (req.header('x-api-key') === process.env.API_KEY) {
         const slug = req.params.slug
-        const books = await getBooks('./data.json')
+        const books = await getBooks()
         const [book, indexBook] = await getBook(slug)
 
         if (indexBook < 0) {
@@ -133,7 +141,7 @@ app.put('/api/books/edit/:slug', async (req, res) => {
 app.delete('/api/books/del/:slug', async (req, res) => {
     if (req.header('x-api-key') === process.env.API_KEY) {
         const slug = req.params.slug
-        const books = await getBooks('./data.json')
+        const books = await getBooks()
         const [book, indexBook] = await getBook(slug)
 
         if (indexBook < 0) {
